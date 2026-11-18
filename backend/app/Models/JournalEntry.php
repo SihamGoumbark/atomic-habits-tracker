@@ -6,5 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class JournalEntry extends Model
 {
-    //
+    protected $fillable = [
+        'user_id', 'entry_date', 'mood_score', 'energy_level',
+        'gratitude_text', 'daily_reflection', 'tomorrow_focus'
+    ];
+
+    protected $casts = [
+        'entry_date' => 'date',
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
