@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Quote, Sparkles, Copy, Check, Shuffle, Globe } from 'lucide-react';
 
-// Base de données d'extraits clés d'Atomic Habits en 3 langues (FR, EN, ES)
+// Extraits clés d'Atomic Habits en 3 langues (FR, EN, ES)
 const BOOK_QUOTES = [
   {
     id: 1,
@@ -29,9 +29,9 @@ const BOOK_QUOTES = [
       es: 'Capítulo 2 — Cómo tus hábitos moldean tu identidad',
     },
     text: {
-      fr: '« Chaque action que vous entreprenez est un vote pour le type de personne que vous souhaitez devenir. Aucune instance unique ne transformera vos croyances, mais à mesure que les votes s’accumulent, les preuves de votre nouvelle identité grandissent. »',
-      en: '“Every action you take is a vote for the type of person you wish to become. No single instance will transform your beliefs, but as the votes build up, so does the evidence of your new identity.”',
-      es: '«Cada acción que realizas es un voto por el tipo de persona en la que deseas convertirte. Ninguna acción aislada transformará tus creencias, pero a medida que se acumulan los votos, crece la evidencia de tu nueva identidad.»',
+      fr: '« Chaque action que vous entreprenez est un vote pour le type de personne que vous souhaitez devenir. À mesure que les votes s’accumulent, les preuves de votre nouvelle identité grandissent. »',
+      en: '“Every action you take is a vote for the type of person you wish to become. As the votes build up, so does the evidence of your new identity.”',
+      es: '«Cada acción que realizas es un voto por el tipo de persona en la que deseas convertirte. A medida que se acumulan los votos, crece la evidencia de tu nueva identidad.»',
     },
     reflection: {
       fr: 'L’objectif n’est pas de lire un livre, mais de devenir un lecteur.',
@@ -66,7 +66,7 @@ const BOOK_QUOTES = [
     },
     text: {
       fr: '« Lorsque vous commencez une nouvelle habitude, elle ne doit pas prendre plus de deux minutes. Vous devez maîtriser l’art d’être présent avant de pouvoir optimiser. »',
-      en: '“When you start a new habit, it should take less than two minutes to do. You have to standardize before you can optimize. You can’t improve a habit that doesn’t exist.”',
+      en: '“When you start a new habit, it should take less than two minutes to do. You have to master the art of showing up before you can optimize.”',
       es: '«Cuando empiezas un nuevo hábito, debe tomarte menos de dos minutos hacerlo. Tienes que dominar el arte de presentarte antes de poder optimizar.»',
     },
     reflection: {
@@ -131,24 +131,22 @@ export default function Quotes() {
   };
 
   const handleShuffle = () => {
-    const nextIndex = (featuredIndex + 1) % BOOK_QUOTES.length;
-    setFeaturedIndex(nextIndex);
+    setFeaturedIndex((prev) => (prev + 1) % BOOK_QUOTES.length);
   };
 
   const featured = BOOK_QUOTES[featuredIndex];
 
   return (
     <div className="space-y-8">
-      {/* En-tête + Sélecteur de langue (FR / EN / ES) */}
+      {/* En-tête + Sélecteur de langue */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Extraits & Sagesse du Livre</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Extraits & Motivation</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Les passages les plus inspirants d’<em>Atomic Habits</em> de James Clear en 3 langues.
+            Les passages les plus puissants d’<em>Atomic Habits</em> de James Clear en 3 langues.
           </p>
         </div>
 
-        {/* Boutons de sélection de langue */}
         <div className="inline-flex items-center gap-1.5 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm self-start">
           <Globe className="w-4 h-4 text-slate-400 ml-2 mr-1" />
           {LANGUAGES.map((l) => (
@@ -168,8 +166,8 @@ export default function Quotes() {
         </div>
       </div>
 
-      {/* Carte "Citation du moment" mise en avant */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm relative overflow-hidden">
+      {/* Citation du moment */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
         <div className="flex items-center justify-between gap-4 mb-4">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700">
             <Sparkles className="w-3.5 h-3.5" />
@@ -210,7 +208,7 @@ export default function Quotes() {
         </div>
       </div>
 
-      {/* Grille de tous les extraits */}
+      {/* Grille des extraits */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {BOOK_QUOTES.map((quote) => (
           <div
@@ -219,9 +217,7 @@ export default function Quotes() {
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-indigo-600">
-                  {quote.chapter[lang]}
-                </span>
+                <span className="text-xs font-medium text-indigo-600">{quote.chapter[lang]}</span>
                 <Quote className="w-4 h-4 text-slate-300 shrink-0" />
               </div>
 
