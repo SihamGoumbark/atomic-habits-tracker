@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Habits from './pages/Habits';
 
 // Mise en page commune pour les pages authentifiées
 function AuthenticatedLayout({ children }) {
@@ -39,7 +40,7 @@ export default function App() {
             path="/habits"
             element={
               <AuthenticatedLayout>
-                <h1 className="text-2xl font-bold text-slate-900">Mes Habitudes & Identités</h1>
+                <Habits />
               </AuthenticatedLayout>
             }
           />
@@ -52,7 +53,7 @@ export default function App() {
             }
           />
 
-          {/* Redirection par défaut */}
+          {/* Redirection par défaut (toujours en dernier) */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
