@@ -1,12 +1,23 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
-import { BookOpen, Smile, Meh, Frown, Send, Calendar } from 'lucide-react';
+import { BookOpen, Send, Calendar, BatteryCharging, Heart } from 'lucide-react';
 
-// Options d'humeur / niveau d'énergie du jour
-const MOOD_OPTIONS = [
-  { value: 'great', label: 'Excellente énergie', icon: Smile, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-  { value: 'neutral', label: 'Journée standard', icon: Meh, color: 'text-amber-600 bg-amber-50 border-amber-200' },
-  { value: 'low', label: 'Journée difficile (2 min)', icon: Frown, color: 'text-rose-600 bg-rose-50 border-rose-200' },
+// Échelle d'humeur (1 à 5)
+const MOOD_SCORES = [
+  { score: 1, emoji: '😞', label: 'Difficile' },
+  { score: 2, emoji: '😕', label: 'Bof' },
+  { score: 3, emoji: '😐', label: 'Neutre' },
+  { score: 4, emoji: '🙂', label: 'Bien' },
+  { score: 5, emoji: '🤩', label: 'Excellent' },
+];
+
+// Échelle d'énergie (1 à 5)
+const ENERGY_LEVELS = [
+  { score: 1, label: '1 - Épuisé(e)' },
+  { score: 2, label: '2 - Fatigué(e)' },
+  { score: 3, label: '3 - Correct' },
+  { score: 4, label: '4 - Dynamique' },
+  { score: 5, label: '5 - Au top' },
 ];
 
 export default function Journal() {
@@ -16,17 +27,30 @@ export default function Journal() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Formulaire de bilan quotidien
-  const [mood, setMood] = useState('great');
-  const [wins, setWins] = useState('');
-  const [obstacles, setObstacles] = useState('');
-  const [tomorrowAdjustment, setTomorrowAdjustment] = useState('');
+  // Champs alignés 100% avec JournalController.php
+  const [moodScore, setMoodScore] = useState(4);
+  const [energyLevel, setEnergyLevel] = useState(4);
+  const [gratitudeText, setGratitudeText] = useState('');
+  const [dailyReflection, setDailyReflection] = useState('');
+  const [tomorrowFocus, setTomorrowFocus] = useState('');
 
-  // Chargement des entrées précédentes du journal
+  const todayStr = new Date().toISOString().split('T')[0];
+
   const fetchEntries = async () => {
     try {
       const res = await api.get('/journal');
-      setEntries(res.data.entries || res.data || []);
+      const fetchedEntries = res.data.entries || [];
+      setEntries(fetchedEntries);
+
+      // Si une entrée existe déjà pour aujourd'hui, pré-remplir le formulaire
+      const todayEntry = fetchedEntries.find((e) => e.entry_date?.startsWith(todayStr));
+      if (todayEntry) {
+        setMoodScore(todayEntry.mood_score || 4);
+        setEnergyLevel(todayEntry.energy_level || 4);
+        setGratitudeText(todayEntry.gratitude_text || '');
+        setDailyReflection(todayEntry.daily_reflection || '');
+        setTomorrowFocus(todayEntry.tomorrow_focus || '');
+      }
     } catch {
       setError('Impossible de charger votre journal.');
     } finally {
@@ -38,44 +62,37 @@ export default function Journal() {
     fetchEntries();
   }, []);
 
-  // Enregistrement d'une nouvelle entrée de journal
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setSubmitting(true);
 
-    // Structuration claire du contenu envoyé à l'API
-    const formattedContent = [
-      wins && `Victoires : ${wins}`,
-      obstacles && `Obstacles rencontrés : ${obstacles}`,
-      tomorrowAdjustment && `Ajustement pour demain (+1%) : ${tomorrowAdjustment}`,
-    ]
-      .filter(Boolean)
-      .join('\n');
-
     try {
       const res = await api.post('/journal', {
-        entry_date: new Date().toISOString().split('T')[0],
-        mood,
-        wins,
-        obstacles,
-        tomorrow_focus: tomorrowAdjustment,
-        content: formattedContent,
+        entry_date: todayStr,
+        mood_score: Number(moodScore),
+        energy_level: Number(energyLevel),
+        gratitude_text: gratitudeText,
+        daily_reflection: dailyReflection,
+        tomorrow_focus: tomorrowFocus,
       });
 
-      const savedEntry = res.data.entry || res.data;
-      setEntries((prev) => [savedEntry, ...prev.filter((item) => item.id !== savedEntry.id)]);
-      setWins('');
-      setObstacles('');
-      setTomorrowAdjustment('');
-      setSuccess('Bilan quotidien enregistré avec succès !');
+      const savedEntry = res.data.entry;
+      setEntries((prev) => [
+        savedEntry,
+        ...prev.filter((item) => item.id !== savedEntry.id),
+      ]);
+      setSuccess(res.data.message || 'Bilan quotidien enregistré avec succès !');
     } catch (err) {
       setError(err.response?.data?.message || 'Erreur lors de l\'enregistrement du journal.');
     } finally {
       setSubmitting(false);
     }
   };
+
+  const getMoodEmoji = (score) =>
+    MOOD_SCORES.find((m) => m.score === Number(score))?.emoji || '🙂';
 
   return (
     <div className="space-y-8">
@@ -98,68 +115,95 @@ export default function Journal() {
         </div>
       )}
 
-      {/* Formulaire de réflexion quotidienne */}
+      {/* Formulaire de bilan quotidien */}
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5"
+        className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6"
       >
-        <div className="flex items-center gap-2 text-slate-900 font-semibold">
-          <BookOpen className="w-5 h-5 text-indigo-600" />
-          <h2>Bilan de la journée</h2>
-        </div>
-
-        {/* Sélection de l'énergie / humeur */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Quel était votre niveau d'énergie aujourd'hui ?
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {MOOD_OPTIONS.map((option) => {
-              const Icon = option.icon;
-              const isSelected = mood === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setMood(option.value)}
-                  className={`flex items-center gap-2.5 p-3 rounded-xl border text-sm font-medium transition cursor-pointer ${
-                    isSelected
-                      ? `${option.color} ring-2 ring-offset-1 ring-slate-900`
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <Icon className="w-5 h-5 shrink-0" />
-                  <span>{option.label}</span>
-                </button>
-              );
-            })}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-slate-900 font-semibold">
+            <BookOpen className="w-5 h-5 text-indigo-600" />
+            <h2>Bilan du jour ({todayStr})</h2>
           </div>
         </div>
 
+        {/* Humeur (mood_score : 1 à 5) & Énergie (energy_level : 1 à 5) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="flex items-center gap-1.5 text-sm font-medium text-slate-700 mb-2">
+              <Heart className="w-4 h-4 text-rose-500" />
+              <span>Humeur du jour ({moodScore}/5) *</span>
+            </label>
+            <div className="grid grid-cols-5 gap-2">
+              {MOOD_SCORES.map((item) => (
+                <button
+                  key={item.score}
+                  type="button"
+                  onClick={() => setMoodScore(item.score)}
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-medium transition cursor-pointer ${
+                    moodScore === item.score
+                      ? 'bg-indigo-50 border-indigo-500 text-indigo-700 ring-2 ring-indigo-500/20'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="text-lg mb-0.5">{item.emoji}</span>
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-1.5 text-sm font-medium text-slate-700 mb-2">
+              <BatteryCharging className="w-4 h-4 text-emerald-600" />
+              <span>Niveau d'énergie ({energyLevel}/5) *</span>
+            </label>
+            <div className="grid grid-cols-5 gap-2">
+              {ENERGY_LEVELS.map((item) => (
+                <button
+                  key={item.score}
+                  type="button"
+                  onClick={() => setEnergyLevel(item.score)}
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-medium transition cursor-pointer ${
+                    energyLevel === item.score
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700 ring-2 ring-emerald-500/20'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="text-base font-bold mb-0.5">{item.score}</span>
+                  <span className="text-[10px] text-center leading-tight">
+                    {item.label.split(' - ')[1]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Champs texte */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Quels votes avez-vous donnés à votre identité aujourd'hui ? *
+              Victoires & Gratitude (Votes pour votre identité)
             </label>
             <textarea
-              required
               rows={3}
-              value={wins}
-              onChange={(e) => setWins(e.target.value)}
-              placeholder="Ex: J'ai respecté mon créneau de code malgré la fatigue..."
+              value={gratitudeText}
+              onChange={(e) => setGratitudeText(e.target.value)}
+              placeholder="Ex: J'ai respecté mon habitude de code même en étant fatigué(e)..."
               className="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Quelles frictions ou distractions avez-vous rencontrées ?
+              Réflexion & Frictions rencontrées
             </label>
             <textarea
               rows={3}
-              value={obstacles}
-              onChange={(e) => setObstacles(e.target.value)}
-              placeholder="Ex: Téléphone sur le bureau pendant la séance..."
+              value={dailyReflection}
+              onChange={(e) => setDailyReflection(e.target.value)}
+              placeholder="Ex: J'ai perdu 20 minutes sur mon téléphone avant de commencer..."
               className="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -167,13 +211,13 @@ export default function Journal() {
 
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
-            Comment rendre demain 1% plus facile ? (Design d'environnement)
+            Focus pour demain (+1% d'amélioration)
           </label>
           <input
             type="text"
-            value={tomorrowAdjustment}
-            onChange={(e) => setTomorrowAdjustment(e.target.value)}
-            placeholder="Ex: Laisser mon téléphone dans une autre pièce avant de commencer."
+            value={tomorrowFocus}
+            onChange={(e) => setTomorrowFocus(e.target.value)}
+            placeholder="Ex: Préparer mon espace de travail ce soir pour rendre demain évident."
             className="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
@@ -207,38 +251,40 @@ export default function Journal() {
             {entries.map((entry) => (
               <div
                 key={entry.id}
-                className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2"
+                className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2.5"
               >
-                <div className="flex items-center justify-between text-xs text-slate-500">
-                  <span className="flex items-center gap-1.5 font-medium text-slate-700">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="flex items-center gap-1.5 font-semibold text-slate-800">
                     <Calendar className="w-4 h-4 text-indigo-600" />
-                    {entry.entry_date || entry.created_at?.split('T')[0]}
+                    {entry.entry_date?.split('T')[0]}
                   </span>
-                  {entry.mood && (
-                    <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium capitalize">
-                      {entry.mood}
+
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-medium">
+                      {getMoodEmoji(entry.mood_score)} Humeur : {entry.mood_score}/5
                     </span>
-                  )}
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium">
+                      ⚡ Énergie : {entry.energy_level}/5
+                    </span>
+                  </div>
                 </div>
 
-                {entry.wins && (
+                {entry.gratitude_text && (
                   <p className="text-sm text-slate-800">
-                    <strong className="text-emerald-700">Victoires :</strong> {entry.wins}
+                    <strong className="text-emerald-700">Victoires :</strong> {entry.gratitude_text}
                   </p>
                 )}
-                {entry.obstacles && (
+                {entry.daily_reflection && (
                   <p className="text-sm text-slate-700">
-                    <strong className="text-amber-700">Frictions :</strong> {entry.obstacles}
+                    <strong className="text-amber-700">Réflexion :</strong>{' '}
+                    {entry.daily_reflection}
                   </p>
                 )}
                 {entry.tomorrow_focus && (
                   <p className="text-sm text-slate-700">
-                    <strong className="text-indigo-700">Ajustement +1% :</strong>{' '}
+                    <strong className="text-indigo-700">Focus demain (+1%) :</strong>{' '}
                     {entry.tomorrow_focus}
                   </p>
-                )}
-                {!entry.wins && entry.content && (
-                  <p className="text-sm text-slate-700 whitespace-pre-line">{entry.content}</p>
                 )}
               </div>
             ))}
