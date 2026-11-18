@@ -5,6 +5,8 @@ import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Habits from './pages/Habits';
+import Dashboard from './pages/Dashboard';
+import Journal from './pages/Journal';
 
 // Mise en page commune pour les pages authentifiées
 function AuthenticatedLayout({ children }) {
@@ -32,7 +34,7 @@ export default function App() {
             path="/dashboard"
             element={
               <AuthenticatedLayout>
-                <h1 className="text-2xl font-bold text-slate-900">Tableau de bord</h1>
+                <Dashboard />
               </AuthenticatedLayout>
             }
           />
@@ -48,7 +50,7 @@ export default function App() {
             path="/journal"
             element={
               <AuthenticatedLayout>
-                <h1 className="text-2xl font-bold text-slate-900">Journal Quotidien</h1>
+                <Journal />
               </AuthenticatedLayout>
             }
           />

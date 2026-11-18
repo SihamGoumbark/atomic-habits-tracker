@@ -8,12 +8,13 @@ import {
   Trash2,
   Clock,
   MapPin,
-  Sparkles,
   Filter,
   ArrowRight,
   ArrowLeft,
   Target,
   ShieldCheck,
+  Compass,
+  X,
 } from 'lucide-react';
 
 // Palette de couleurs pour les identités
@@ -33,7 +34,10 @@ export default function Habits() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // États du Questionnaire Guidé (Onboarding 3 étapes pour nouvel utilisateur)
+  // Permet de lancer l'Assistant Guidé (Identité + Habitude) à la demande
+  const [forceWizard, setForceWizard] = useState(false);
+
+  // États de l'Assistant Guidé en 3 étapes
   const [wizardStep, setWizardStep] = useState(1);
   const [wizardData, setWizardData] = useState({
     identityTitle: '',
@@ -47,12 +51,7 @@ export default function Habits() {
   });
   const [wizardSubmitting, setWizardSubmitting] = useState(false);
 
-  // États des formulaires rapides (pour utilisateurs ayant déjà des habitudes)
-  const [showIdentityForm, setShowIdentityForm] = useState(false);
-  const [identityTitle, setIdentityTitle] = useState('');
-  const [identityDesc, setIdentityDesc] = useState('');
-  const [identityColor, setIdentityColor] = useState(IDENTITY_COLORS[0]);
-
+  // Formulaire rapide pour ajouter une habitude à une identité existante
   const [showHabitForm, setShowHabitForm] = useState(false);
   const [habitForm, setHabitForm] = useState({
     identity_id: '',
@@ -89,14 +88,30 @@ export default function Habits() {
     fetchData();
   }, []);
 
-  // Soumission complète du Questionnaire Guidé (Création Identité + Habitude en cascade)
+  // Ouvrir l'Assistant Guidé (Nouveau système complet)
+  const openWizard = () => {
+    setShowHabitForm(false);
+    setWizardStep(1);
+    setWizardData({
+      identityTitle: '',
+      identityDesc: '',
+      identityColor: IDENTITY_COLORS[0],
+      habitTitle: '',
+      cueTrigger: '',
+      cueTime: '09:00',
+      cueLocation: '',
+      twoMinuteVersion: '',
+    });
+    setForceWizard(true);
+  };
+
+  // Soumission complète de l'Assistant Guidé (Identité + Habitude)
   const handleWizardComplete = async (e) => {
     e.preventDefault();
     setError('');
     setWizardSubmitting(true);
 
     try {
-      // 1. Création de l'identité choisie par l'utilisateur
       const idRes = await api.post('/identities', {
         title: wizardData.identityTitle,
         description: wizardData.identityDesc,
@@ -105,7 +120,6 @@ export default function Habits() {
       });
       const createdIdentity = idRes.data.identity;
 
-      // 2. Création de la première habitude selon les 4 Lois
       const locationWithTrigger = wizardData.cueTrigger
         ? `${wizardData.cueLocation || 'Maison'} (Après : ${wizardData.cueTrigger})`
         : wizardData.cueLocation;
@@ -119,9 +133,10 @@ export default function Habits() {
         frequency: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
       });
 
-      setIdentities([createdIdentity]);
-      setHabits([habRes.data.habit]);
+      setIdentities((prev) => [...prev, createdIdentity]);
+      setHabits((prev) => [habRes.data.habit, ...prev]);
       setHabitForm((prev) => ({ ...prev, identity_id: createdIdentity.id }));
+      setForceWizard(false);
     } catch (err) {
       setError(err.response?.data?.message || 'Erreur lors de la création de votre système.');
     } finally {
@@ -129,29 +144,7 @@ export default function Habits() {
     }
   };
 
-  // Création d'une identité supplémentaire
-  const handleCreateIdentity = async (e) => {
-    e.preventDefault();
-    setError('');
-    try {
-      const res = await api.post('/identities', {
-        title: identityTitle,
-        description: identityDesc,
-        color: identityColor,
-        icon: 'sparkles',
-      });
-      const newIdentity = res.data.identity;
-      setIdentities((prev) => [...prev, newIdentity]);
-      setHabitForm((prev) => ({ ...prev, identity_id: newIdentity.id }));
-      setIdentityTitle('');
-      setIdentityDesc('');
-      setShowIdentityForm(false);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la création de l\'identité.');
-    }
-  };
-
-  // Création d'une habitude supplémentaire
+  // Ajout rapide d'une habitude sur une identité existante
   const handleCreateHabit = async (e) => {
     e.preventDefault();
     setError('');
@@ -213,26 +206,39 @@ export default function Habits() {
   }
 
   // =========================================================================
-  // MODE QUESTIONNAIRE GUIDÉ : Affiché si l'utilisateur n'a encore aucune identité
+  // ASSISTANT GUIDÉ : Création d'un système complet (Identité + Habitude)
   // =========================================================================
-  if (identities.length === 0) {
+  if (identities.length === 0 || forceWizard) {
     return (
       <div className="max-w-2xl mx-auto py-4">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
-          {/* Barre de progression des 3 étapes */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 gap-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600">
-              Configuration Atomic Habits • Étape {wizardStep} sur 3
+              Nouveau Système Atomic Habits • Étape {wizardStep} sur 3
             </span>
-            <div className="flex gap-1.5">
-              {[1, 2, 3].map((step) => (
-                <div
-                  key={step}
-                  className={`h-2 w-10 rounded-full transition ${
-                    step <= wizardStep ? 'bg-indigo-600' : 'bg-slate-200'
-                  }`}
-                />
-              ))}
+
+            <div className="flex items-center gap-3">
+              <div className="flex gap-1.5">
+                {[1, 2, 3].map((step) => (
+                  <div
+                    key={step}
+                    className={`h-2 w-8 sm:w-10 rounded-full transition ${
+                      step <= wizardStep ? 'bg-indigo-600' : 'bg-slate-200'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {identities.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setForceWizard(false)}
+                  title="Retourner à mes habitudes"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -243,7 +249,7 @@ export default function Habits() {
           )}
 
           <form onSubmit={handleWizardComplete}>
-            {/* ÉTAPE 1 : L'IDENTITÉ (Le cœur du livre) */}
+            {/* ÉTAPE 1 : L'IDENTITÉ */}
             {wizardStep === 1 && (
               <div className="space-y-5">
                 <div>
@@ -255,7 +261,6 @@ export default function Habits() {
                   </p>
                 </div>
 
-                {/* Suggestions cliquables */}
                 <div>
                   <p className="text-xs font-medium text-slate-500 mb-2">Exemples d'inspiration :</p>
                   <div className="flex flex-wrap gap-2">
@@ -330,7 +335,19 @@ export default function Habits() {
                   </div>
                 </div>
 
-                <div className="pt-4 flex justify-end">
+                <div className="pt-4 flex justify-between items-center">
+                  {identities.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setForceWizard(false)}
+                      className="text-sm text-slate-500 hover:text-slate-800 cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                  ) : (
+                    <span></span>
+                  )}
+
                   <button
                     type="button"
                     disabled={!wizardData.identityTitle.trim()}
@@ -344,7 +361,7 @@ export default function Habits() {
               </div>
             )}
 
-            {/* ÉTAPE 2 : LOI 1 (Rendre évident - Intention d'implémentation & Habit Stacking) */}
+            {/* ÉTAPE 2 : LOI 1 (Rendre évident) */}
             {wizardStep === 2 && (
               <div className="space-y-5">
                 <div>
@@ -436,7 +453,7 @@ export default function Habits() {
               </div>
             )}
 
-            {/* ÉTAPE 3 : LOI 3 (Rendre facile - Règle des 2 minutes) & LOI 4 (Never Miss Twice) */}
+            {/* ÉTAPE 3 : LOI 3 (Règle des 2 minutes) */}
             {wizardStep === 3 && (
               <div className="space-y-5">
                 <div>
@@ -467,7 +484,6 @@ export default function Habits() {
                   />
                 </div>
 
-                {/* Récapitulatif de l'engagement */}
                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-sm">
                   <div className="flex items-center gap-2 font-semibold text-slate-900">
                     <ShieldCheck className="w-4 h-4 text-emerald-600" />
@@ -524,27 +540,22 @@ export default function Habits() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* 2 boutons clairs et complémentaires */}
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={() => {
-              setShowIdentityForm(!showIdentityForm);
-              setShowHabitForm(false);
-            }}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-medium hover:bg-slate-50 transition cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4 text-indigo-600" />
-            <span>Nouvelle identité</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setShowHabitForm(!showHabitForm);
-              setShowIdentityForm(false);
-            }}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition cursor-pointer"
+            onClick={() => setShowHabitForm(!showHabitForm)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-medium hover:bg-slate-50 transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Nouvelle habitude</span>
+          </button>
+
+          <button
+            onClick={openWizard}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition cursor-pointer"
+          >
+            <Compass className="w-4 h-4" />
+            <span>Nouveau système</span>
           </button>
         </div>
       </div>
@@ -555,79 +566,15 @@ export default function Habits() {
         </div>
       )}
 
-      {/* Formulaire ajout identité */}
-      {showIdentityForm && (
-        <form
-          onSubmit={handleCreateIdentity}
-          className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4"
-        >
-          <h2 className="text-lg font-semibold text-slate-900">Nouvelle identité</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Qui voulez-vous devenir ? *
-              </label>
-              <input
-                type="text"
-                required
-                value={identityTitle}
-                onChange={(e) => setIdentityTitle(e.target.value)}
-                placeholder="Ex: Sportif Régulier..."
-                className="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Couleur</label>
-              <div className="flex items-center gap-2.5 pt-1">
-                {IDENTITY_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setIdentityColor(color)}
-                    style={{ backgroundColor: color }}
-                    className={`w-8 h-8 rounded-full transition cursor-pointer ${
-                      identityColor === color ? 'ring-2 ring-offset-2 ring-slate-900 scale-110' : ''
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-            <input
-              type="text"
-              value={identityDesc}
-              onChange={(e) => setIdentityDesc(e.target.value)}
-              placeholder="Affirmation liée à cette identité..."
-              className="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setShowIdentityForm(false)}
-              className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 text-sm bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 cursor-pointer"
-            >
-              Enregistrer
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Formulaire ajout habitude */}
+      {/* Formulaire ajout rapide d'habitude sur une identité existante */}
       {showHabitForm && (
         <form
           onSubmit={handleCreateHabit}
           className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4"
         >
-          <h2 className="text-lg font-semibold text-slate-900">Nouvelle habitude atomique</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Ajouter une habitude à une identité existante
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Identité *</label>
