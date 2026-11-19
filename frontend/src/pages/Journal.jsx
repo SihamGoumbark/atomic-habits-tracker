@@ -1,23 +1,63 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
-import { BookOpen, Send, Calendar, BatteryCharging, Heart } from 'lucide-react';
+import {
+  BookOpen,
+  Send,
+  Calendar,
+  BatteryCharging,
+  Heart,
+  Frown,
+  Meh,
+  Smile,
+  Laugh,
+  Annoyed,
+  Zap,
+} from 'lucide-react';
 
-// Échelle d'humeur (1 à 5)
 const MOOD_SCORES = [
-  { score: 1, emoji: '😞', label: 'Difficile' },
-  { score: 2, emoji: '😕', label: 'Bof' },
-  { score: 3, emoji: '😐', label: 'Neutre' },
-  { score: 4, emoji: '🙂', label: 'Bien' },
-  { score: 5, emoji: '🤩', label: 'Excellent' },
+  {
+    score: 1,
+    icon: Frown,
+    label: 'Difficile',
+    badgeBg: 'bg-rose-100 text-rose-600',
+    activeRing: 'border-rose-500 bg-rose-50/70 text-rose-800 ring-2 ring-rose-500/20',
+  },
+  {
+    score: 2,
+    icon: Annoyed,
+    label: 'Bof',
+    badgeBg: 'bg-orange-100 text-orange-600',
+    activeRing: 'border-orange-500 bg-orange-50/70 text-orange-800 ring-2 ring-orange-500/20',
+  },
+  {
+    score: 3,
+    icon: Meh,
+    label: 'Neutre',
+    badgeBg: 'bg-amber-100 text-amber-600',
+    activeRing: 'border-amber-500 bg-amber-50/70 text-amber-800 ring-2 ring-amber-500/20',
+  },
+  {
+    score: 4,
+    icon: Smile,
+    label: 'Bien',
+    badgeBg: 'bg-sky-100 text-sky-600',
+    activeRing: 'border-sky-500 bg-sky-50/70 text-sky-800 ring-2 ring-sky-500/20',
+  },
+  {
+    score: 5,
+    icon: Laugh,
+    label: 'Excellent',
+    badgeBg: 'bg-emerald-100 text-emerald-600',
+    activeRing: 'border-emerald-500 bg-emerald-50/70 text-emerald-800 ring-2 ring-emerald-500/20',
+  },
 ];
 
-// Échelle d'énergie (1 à 5)
 const ENERGY_LEVELS = [
-  { score: 1, label: '1 - Épuisé(e)' },
-  { score: 2, label: '2 - Fatigué(e)' },
-  { score: 3, label: '3 - Correct' },
-  { score: 4, label: '4 - Dynamique' },
-  { score: 5, label: '5 - Au top' },
+  { score: 1, label: 'Épuisé(e)', color: 'text-rose-600 bg-rose-100' },
+  { score: 2, label: 'Fatigué(e)', color: 'text-orange-600 bg-orange-100' },
+  { score: 3, label: 'Correct', color: 'text-amber-600 bg-amber-100' },
+  { score: 4, label: 'Dynamique', color: 'text-sky-600 bg-sky-100' },
+  { score: 5, label: 'Au top', color: 'text-emerald-600 bg-emerald-100' },
 ];
 
 export default function Journal() {
@@ -27,7 +67,6 @@ export default function Journal() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Champs alignés 100% avec JournalController.php
   const [moodScore, setMoodScore] = useState(4);
   const [energyLevel, setEnergyLevel] = useState(4);
   const [gratitudeText, setGratitudeText] = useState('');
@@ -39,18 +78,7 @@ export default function Journal() {
   const fetchEntries = async () => {
     try {
       const res = await api.get('/journal');
-      const fetchedEntries = res.data.entries || [];
-      setEntries(fetchedEntries);
-
-      // Si une entrée existe déjà pour aujourd'hui, pré-remplir le formulaire
-      const todayEntry = fetchedEntries.find((e) => e.entry_date?.startsWith(todayStr));
-      if (todayEntry) {
-        setMoodScore(todayEntry.mood_score || 4);
-        setEnergyLevel(todayEntry.energy_level || 4);
-        setGratitudeText(todayEntry.gratitude_text || '');
-        setDailyReflection(todayEntry.daily_reflection || '');
-        setTomorrowFocus(todayEntry.tomorrow_focus || '');
-      }
+      setEntries(res.data.entries || []);
     } catch {
       setError('Impossible de charger votre journal.');
     } finally {
@@ -83,6 +111,10 @@ export default function Journal() {
         savedEntry,
         ...prev.filter((item) => item.id !== savedEntry.id),
       ]);
+
+      setGratitudeText('');
+      setDailyReflection('');
+      setTomorrowFocus('');
       setSuccess(res.data.message || 'Bilan quotidien enregistré avec succès !');
     } catch (err) {
       setError(err.response?.data?.message || 'Erreur lors de l\'enregistrement du journal.');
@@ -91,14 +123,22 @@ export default function Journal() {
     }
   };
 
-  const getMoodEmoji = (score) =>
-    MOOD_SCORES.find((m) => m.score === Number(score))?.emoji || '🙂';
+  const getMoodBadge = (score) => {
+    const found = MOOD_SCORES.find((m) => m.score === Number(score)) || MOOD_SCORES[3];
+    const Icon = found.icon;
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium ${found.badgeBg}`}>
+        <Icon className="w-3.5 h-3.5" />
+        <span>Humeur : {score}/5 ({found.label})</span>
+      </span>
+    );
+  };
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="pb-2 border-b border-slate-200">
         <h1 className="text-2xl font-bold text-slate-900">Journal & Revue Quotidienne</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-slate-500 mt-0.5">
           « La réflexion et la révision permettent une amélioration continue à long terme. »
         </p>
       </div>
@@ -115,67 +155,76 @@ export default function Journal() {
         </div>
       )}
 
-      {/* Formulaire de bilan quotidien */}
+      {/* Formulaire vierge prêt à remplir */}
       <form
         onSubmit={handleSubmit}
         className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6"
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-slate-900 font-semibold">
-            <BookOpen className="w-5 h-5 text-indigo-600" />
-            <h2>Bilan du jour ({todayStr})</h2>
-          </div>
+        <div className="flex items-center gap-2 text-slate-900 font-semibold">
+          <BookOpen className="w-5 h-5 text-indigo-600" />
+          <h2>Bilan du jour ({todayStr})</h2>
         </div>
 
-        {/* Humeur (mood_score : 1 à 5) & Énergie (energy_level : 1 à 5) */}
+        {/* Humeur & Énergie */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="flex items-center gap-1.5 text-sm font-medium text-slate-700 mb-2">
-              <Heart className="w-4 h-4 text-rose-500" />
+            <label className="flex items-center gap-1.5 text-sm font-medium text-slate-700 mb-2.5">
+              <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
               <span>Humeur du jour ({moodScore}/5) *</span>
             </label>
             <div className="grid grid-cols-5 gap-2">
-              {MOOD_SCORES.map((item) => (
-                <button
-                  key={item.score}
-                  type="button"
-                  onClick={() => setMoodScore(item.score)}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-medium transition cursor-pointer ${
-                    moodScore === item.score
-                      ? 'bg-indigo-50 border-indigo-500 text-indigo-700 ring-2 ring-indigo-500/20'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <span className="text-lg mb-0.5">{item.emoji}</span>
-                  <span>{item.label}</span>
-                </button>
-              ))}
+              {MOOD_SCORES.map((item) => {
+                const Icon = item.icon;
+                const isSelected = moodScore === item.score;
+                return (
+                  <button
+                    key={item.score}
+                    type="button"
+                    onClick={() => setMoodScore(item.score)}
+                    className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-medium transition cursor-pointer ${
+                      isSelected
+                        ? item.activeRing
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className={`p-1.5 rounded-full mb-1 ${item.badgeBg}`}>
+                      <Icon className="w-4 h-4" />
+                    </span>
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           <div>
-            <label className="flex items-center gap-1.5 text-sm font-medium text-slate-700 mb-2">
+            <label className="flex items-center gap-1.5 text-sm font-medium text-slate-700 mb-2.5">
               <BatteryCharging className="w-4 h-4 text-emerald-600" />
               <span>Niveau d'énergie ({energyLevel}/5) *</span>
             </label>
             <div className="grid grid-cols-5 gap-2">
-              {ENERGY_LEVELS.map((item) => (
-                <button
-                  key={item.score}
-                  type="button"
-                  onClick={() => setEnergyLevel(item.score)}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-medium transition cursor-pointer ${
-                    energyLevel === item.score
-                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700 ring-2 ring-emerald-500/20'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <span className="text-base font-bold mb-0.5">{item.score}</span>
-                  <span className="text-[10px] text-center leading-tight">
-                    {item.label.split(' - ')[1]}
-                  </span>
-                </button>
-              ))}
+              {ENERGY_LEVELS.map((item) => {
+                const isSelected = energyLevel === item.score;
+                return (
+                  <button
+                    key={item.score}
+                    type="button"
+                    onClick={() => setEnergyLevel(item.score)}
+                    className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-medium transition cursor-pointer ${
+                      isSelected
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-800 ring-2 ring-emerald-500/20'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold mb-1 ${item.color}`}
+                    >
+                      {item.score}
+                    </span>
+                    <span className="text-[10px] text-center leading-tight">{item.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -260,11 +309,10 @@ export default function Journal() {
                   </span>
 
                   <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-medium">
-                      {getMoodEmoji(entry.mood_score)} Humeur : {entry.mood_score}/5
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium">
-                      ⚡ Énergie : {entry.energy_level}/5
+                    {getMoodBadge(entry.mood_score)}
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-medium">
+                      <Zap className="w-3.5 h-3.5 fill-amber-500" />
+                      <span>Énergie : {entry.energy_level}/5</span>
                     </span>
                   </div>
                 </div>

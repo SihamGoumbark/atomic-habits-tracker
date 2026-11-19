@@ -4,11 +4,11 @@ import {
   Plus,
   Flame,
   Check,
+  Ban,
   Zap,
   Trash2,
   Clock,
   MapPin,
-  Filter,
   ArrowRight,
   ArrowLeft,
   Target,
@@ -18,7 +18,29 @@ import {
   ThumbsUp,
   ThumbsDown,
   ShieldAlert,
+  Search,
+  Quote,
+  Shuffle,
+  Eye,
+  Heart,
+  Feather,
+  Award,
+  EyeOff,
+  AlertCircle,
+  Lock,
+  UserCheck,
 } from 'lucide-react';
+
+const CACHE_KEY = 'atomic_habits_cache';
+
+const getCachedData = () => {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
 
 const IDENTITY_COLORS = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4'];
 
@@ -28,28 +50,107 @@ const IDENTITY_EXAMPLES = [
   { title: 'Athlète Régulier', desc: 'Je prends soin de mon corps sans excuses.' },
 ];
 
-// Les 4 Lois pour CONSTRUIRE une Bonne Habitude (uniquement affichées dans l'onglet Bonnes Habitudes)
-const GOOD_HABIT_LAWS = [
-  { step: '1. Signal', rule: 'Rendre ça ÉVIDENT', desc: 'Heure + Lieu précis' },
-  { step: '2. Envie', rule: 'Rendre ça ATTRACTIF', desc: 'Lier à son identité' },
-  { step: '3. Réponse', rule: 'Rendre ça FACILE', desc: 'Règle des 2 minutes' },
-  { step: '4. Récompense', rule: 'Rendre ça SATISFAISANT', desc: 'Ne pas briser la chaîne' },
+const MOTIVATION_QUOTES = [
+  {
+    text: '« Chaque action que vous entreprenez est un vote pour le type de personne que vous souhaitez devenir. »',
+    author: 'James Clear — Atomic Habits',
+  },
+  {
+    text: '« Vous ne vous élevez pas au niveau de vos objectifs. Vous tombez au niveau de vos systèmes. »',
+    author: 'James Clear — Atomic Habits',
+  },
+  {
+    text: '« S’améliorer de 1 % chaque jour pendant un an vous rend 37 fois meilleur à la fin. »',
+    author: 'James Clear — Atomic Habits',
+  },
+  {
+    text: '« Manquer une fois est un accident ; manquer deux fois est le début d’une nouvelle habitude. »',
+    author: 'James Clear — Atomic Habits',
+  },
 ];
 
-// Les 4 Inversions pour BRISER une Mauvaise Habitude (uniquement affichées dans l'onglet Mauvaises Habitudes)
+const GOOD_HABIT_LAWS = [
+  {
+    step: '1. Signal',
+    rule: 'Rendre ça ÉVIDENT',
+    desc: 'Définir une heure et un lieu précis.',
+    icon: Eye,
+    badge: 'bg-blue-100 text-blue-600',
+    border: 'border-blue-200/80',
+  },
+  {
+    step: '2. Envie',
+    rule: 'Rendre ça ATTRACTIF',
+    desc: 'Associer l’action à votre identité.',
+    icon: Heart,
+    badge: 'bg-purple-100 text-purple-600',
+    border: 'border-purple-200/80',
+  },
+  {
+    step: '3. Réponse',
+    rule: 'Rendre ça FACILE',
+    desc: 'Appliquer la Règle des 2 minutes.',
+    icon: Feather,
+    badge: 'bg-amber-100 text-amber-600',
+    border: 'border-amber-200/80',
+  },
+  {
+    step: '4. Récompense',
+    rule: 'Rendre ça SATISFAISANT',
+    desc: 'Ne jamais briser la chaîne.',
+    icon: Award,
+    badge: 'bg-emerald-100 text-emerald-600',
+    border: 'border-emerald-200/80',
+  },
+];
+
 const BAD_HABIT_LAWS = [
-  { step: '1. Signal', rule: 'Rendre ça INVISIBLE', desc: 'Supprimer les déclencheurs' },
-  { step: '2. Envie', rule: 'Rendre ça REPOUSSANT', desc: 'Voir le coût réel' },
-  { step: '3. Réponse', rule: 'Rendre ça DIFFICILE', desc: 'Augmenter la friction' },
-  { step: '4. Récompense', rule: 'Rendre ça INSATISFAISANT', desc: 'Contrat & suivi' },
+  {
+    step: '1. Signal',
+    rule: 'Rendre ça INVISIBLE',
+    desc: 'Supprimer les déclencheurs visuels.',
+    icon: EyeOff,
+    badge: 'bg-rose-100 text-rose-600',
+    border: 'border-rose-200/80',
+  },
+  {
+    step: '2. Envie',
+    rule: 'Rendre ça REPOUSSANT',
+    desc: 'Mettre en lumière le coût réel.',
+    icon: AlertCircle,
+    badge: 'bg-orange-100 text-orange-600',
+    border: 'border-orange-200/80',
+  },
+  {
+    step: '3. Réponse',
+    rule: 'Rendre ça DIFFICILE',
+    desc: 'Augmenter la friction au maximum.',
+    icon: Lock,
+    badge: 'bg-amber-100 text-amber-600',
+    border: 'border-amber-200/80',
+  },
+  {
+    step: '4. Récompense',
+    rule: 'Rendre ça INSATISFAISANT',
+    desc: 'Engager un contrat de responsabilité.',
+    icon: UserCheck,
+    badge: 'bg-red-100 text-red-600',
+    border: 'border-red-200/80',
+  },
 ];
 
 export default function Habits() {
-  const [activeMode, setActiveMode] = useState('good'); // 'good' ou 'bad'
-  const [identities, setIdentities] = useState([]);
-  const [habits, setHabits] = useState([]);
+  const initialCache = getCachedData();
+
+  const [activeMode, setActiveMode] = useState('good');
+  const [quoteIdx, setQuoteIdx] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const [identities, setIdentities] = useState(initialCache?.identities || []);
+  const [habits, setHabits] = useState(initialCache?.habits || []);
+  const [badHabits, setBadHabits] = useState(initialCache?.badHabits || []);
   const [selectedIdentity, setSelectedIdentity] = useState('all');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialCache);
   const [error, setError] = useState('');
 
   // Assistant Guidé (Identité + Bonne Habitude)
@@ -70,18 +171,16 @@ export default function Habits() {
   // Formulaire rapide d'ajout de bonne habitude
   const [showHabitForm, setShowHabitForm] = useState(false);
   const [habitForm, setHabitForm] = useState({
-    identity_id: '',
+    identity_id: initialCache?.identities?.[0]?.id || '',
     title: '',
     two_minute_version: '',
     cue_time: '',
     cue_location: '',
   });
 
-  // Atelier Mauvaises Habitudes (Inversion des 4 Lois)
-  const [badHabits, setBadHabits] = useState(() => {
-    const saved = localStorage.getItem('atomic_bad_habits');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Formulaire Mauvaises Habitudes (Sauvegardé en BDD Laravel)
+  const [showBadForm, setShowBadForm] = useState(false);
+  const [savingBadHabit, setSavingBadHabit] = useState(false);
   const [badForm, setBadForm] = useState({
     name: '',
     invisible: '',
@@ -90,23 +189,53 @@ export default function Habits() {
     unsatisfying: '',
   });
 
+  const syncCache = (nextIdentities, nextHabits, nextBadHabits) => {
+    try {
+      sessionStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({
+          identities: nextIdentities,
+          habits: nextHabits,
+          badHabits: nextBadHabits,
+        })
+      );
+      sessionStorage.removeItem('atomic_dashboard_cache');
+    } catch {
+      // Ignore storage quota errors
+    }
+  };
+
   const fetchData = async () => {
     try {
-      const [idRes, habRes] = await Promise.all([
+      const [idRes, habRes, badRes] = await Promise.all([
         api.get('/identities'),
         api.get('/habits'),
+        api.get('/bad-habits').catch(() => ({ data: { bad_habits: [] } })),
       ]);
       const fetchedIdentities = idRes.data.identities || idRes.data;
       const fetchedHabits = habRes.data.habits || habRes.data;
+      const fetchedBadHabits = badRes.data.bad_habits || badRes.data || [];
 
       setIdentities(fetchedIdentities);
       setHabits(fetchedHabits);
+      setBadHabits(fetchedBadHabits);
+
+      sessionStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({
+          identities: fetchedIdentities,
+          habits: fetchedHabits,
+          badHabits: fetchedBadHabits,
+        })
+      );
 
       if (fetchedIdentities.length > 0 && !habitForm.identity_id) {
         setHabitForm((prev) => ({ ...prev, identity_id: fetchedIdentities[0].id }));
       }
     } catch {
-      setError('Impossible de charger vos données. Vérifiez que le serveur Laravel est actif.');
+      if (!initialCache) {
+        setError('Impossible de charger vos données. Vérifiez que le serveur Laravel est actif.');
+      }
     } finally {
       setLoading(false);
     }
@@ -159,8 +288,12 @@ export default function Habits() {
         frequency: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
       });
 
-      setIdentities((prev) => [...prev, createdIdentity]);
-      setHabits((prev) => [habRes.data.habit, ...prev]);
+      const nextIdentities = [...identities, createdIdentity];
+      const nextHabits = [habRes.data.habit, ...habits];
+
+      setIdentities(nextIdentities);
+      setHabits(nextHabits);
+      syncCache(nextIdentities, nextHabits, badHabits);
       setHabitForm((prev) => ({ ...prev, identity_id: createdIdentity.id }));
       setForceWizard(false);
     } catch (err) {
@@ -178,7 +311,9 @@ export default function Habits() {
         ...habitForm,
         frequency: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
       });
-      setHabits((prev) => [res.data.habit, ...prev]);
+      const nextHabits = [res.data.habit, ...habits];
+      setHabits(nextHabits);
+      syncCache(identities, nextHabits, badHabits);
       setHabitForm({
         identity_id: identities[0]?.id || '',
         title: '',
@@ -193,14 +328,38 @@ export default function Habits() {
   };
 
   const handleToggleHabit = async (habitId, completionType = 'full') => {
+    const previousHabits = [...habits];
+
+    const optimisticHabits = habits.map((h) => {
+      if (h.id !== habitId) return h;
+      const nextCompleted = !Boolean(h.completed_today);
+      const currentStreak = h.current_streak || 0;
+      const nextStreak = nextCompleted ? currentStreak + 1 : Math.max(0, currentStreak - 1);
+
+      return {
+        ...h,
+        completed_today: nextCompleted,
+        current_streak: nextStreak,
+      };
+    });
+
+    setHabits(optimisticHabits);
+    syncCache(identities, optimisticHabits, badHabits);
+
     try {
       const res = await api.post(`/habits/${habitId}/toggle`, {
         completion_type: completionType,
       });
-      setHabits((prev) =>
-        prev.map((h) => (h.id === habitId ? { ...h, ...res.data.habit } : h))
-      );
+      if (res.data?.habit) {
+        const confirmedHabits = optimisticHabits.map((h) =>
+          h.id === habitId ? { ...h, ...res.data.habit } : h
+        );
+        setHabits(confirmedHabits);
+        syncCache(identities, confirmedHabits, badHabits);
+      }
     } catch (err) {
+      setHabits(previousHabits);
+      syncCache(identities, previousHabits, badHabits);
       setError(err.response?.data?.message || 'Erreur lors de la mise à jour.');
     }
   };
@@ -209,54 +368,98 @@ export default function Habits() {
     if (!window.confirm('Supprimer définitivement cette habitude ?')) return;
     try {
       await api.delete(`/habits/${habitId}`);
-      setHabits((prev) => prev.filter((h) => h.id !== habitId));
+      const nextHabits = habits.filter((h) => h.id !== habitId);
+      setHabits(nextHabits);
+      syncCache(identities, nextHabits, badHabits);
     } catch {
       setError('Impossible de supprimer cette habitude.');
     }
   };
 
-  const handleAddBadHabit = (e) => {
+  // Enregistrement des Mauvaises Habitudes en base de données Laravel
+  const handleAddBadHabit = async (e) => {
     e.preventDefault();
     if (!badForm.name.trim()) return;
-    const updated = [{ id: Date.now(), ...badForm }, ...badHabits];
-    setBadHabits(updated);
-    localStorage.setItem('atomic_bad_habits', JSON.stringify(updated));
-    setBadForm({ name: '', invisible: '', unattractive: '', difficult: '', unsatisfying: '' });
+    setError('');
+    setSavingBadHabit(true);
+
+    try {
+      const res = await api.post('/bad-habits', badForm);
+      const created = res.data.bad_habit || res.data;
+      const nextBadHabits = [created, ...badHabits];
+      setBadHabits(nextBadHabits);
+      syncCache(identities, habits, nextBadHabits);
+      setBadForm({ name: '', invisible: '', unattractive: '', difficult: '', unsatisfying: '' });
+      setShowBadForm(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Erreur lors de l\'enregistrement du plan.');
+    } finally {
+      setSavingBadHabit(false);
+    }
   };
 
-  const handleRemoveBadHabit = (id) => {
-    const updated = badHabits.filter((item) => item.id !== id);
-    setBadHabits(updated);
-    localStorage.setItem('atomic_bad_habits', JSON.stringify(updated));
+  const handleRemoveBadHabit = async (id) => {
+    if (!window.confirm('Supprimer ce plan anti-habitude ?')) return;
+    try {
+      await api.delete(`/bad-habits/${id}`);
+      const nextBadHabits = badHabits.filter((item) => item.id !== id);
+      setBadHabits(nextBadHabits);
+      syncCache(identities, habits, nextBadHabits);
+    } catch {
+      setError('Impossible de supprimer ce plan.');
+    }
   };
 
-  const filteredHabits =
-    selectedIdentity === 'all'
-      ? habits
-      : habits.filter((h) => String(h.identity_id) === String(selectedIdentity));
+  const filteredHabits = habits.filter((h) => {
+    const matchesIdentity =
+      selectedIdentity === 'all' || String(h.identity_id) === String(selectedIdentity);
+    const matchesSearch =
+      !searchQuery.trim() ||
+      h.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (h.two_minute_version &&
+        h.two_minute_version.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesIdentity && matchesSearch;
+  });
+
+  const filteredBadHabits = badHabits.filter(
+    (item) =>
+      !searchQuery.trim() || item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+      <div className="space-y-6 animate-pulse">
+        <div className="h-12 bg-slate-200/70 rounded-xl w-1/3" />
+        <div className="h-16 bg-slate-200/60 rounded-2xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {[1, 2, 3, 4].map((n) => (
+            <div key={n} className="h-24 bg-slate-200/60 rounded-2xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+          {[1, 2].map((n) => (
+            <div key={n} className="h-48 bg-slate-200/60 rounded-2xl" />
+          ))}
+        </div>
       </div>
     );
   }
 
+  const currentLaws = activeMode === 'good' ? GOOD_HABIT_LAWS : BAD_HABIT_LAWS;
+
   return (
-    <div className="space-y-8">
-      {/* En-tête + Sélecteur Good Habit vs Bad Habit */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6">
+      {/* 1. EN-TÊTE + BASCULE BONNES / MAUVAISES HABITUDES */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Système d'Habitudes</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-2xl font-bold text-slate-900">Mes Habitudes</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
             {activeMode === 'good'
-              ? 'Appliquez les 4 Lois pour ancrer durablement vos bonnes habitudes.'
-              : 'Inversez les 4 Lois pour rendre vos mauvaises habitudes impossibles à suivre.'}
+              ? 'Construisez vos habitudes grâce aux 4 Lois du changement de comportement.'
+              : 'Éliminez vos mauvaises habitudes en inversant les 4 Lois.'}
           </p>
         </div>
 
-        {/* Bascule Good Habits / Bad Habits */}
         <div className="inline-flex p-1 rounded-xl bg-white border border-slate-200 shadow-sm self-start">
           <button
             onClick={() => setActiveMode('good')}
@@ -284,6 +487,53 @@ export default function Habits() {
         </div>
       </div>
 
+      {/* 2. BANNIÈRE CITATION MOTIVANTE */}
+      <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 shadow-sm flex items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3">
+          <span className="p-2 rounded-xl bg-indigo-50 text-indigo-600 shrink-0">
+            <Quote className="w-4 h-4" />
+          </span>
+          <div>
+            <p className="text-sm font-medium text-slate-800 italic">
+              {MOTIVATION_QUOTES[quoteIdx].text}
+            </p>
+            <span className="text-xs text-slate-400">{MOTIVATION_QUOTES[quoteIdx].author}</span>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setQuoteIdx((prev) => (prev + 1) % MOTIVATION_QUOTES.length)}
+          title="Nouvelle citation"
+          className="p-2 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition shrink-0 cursor-pointer"
+        >
+          <Shuffle className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* 3. LES 4 LOIS MISES EN VALEUR */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        {currentLaws.map((law) => {
+          const Icon = law.icon;
+          return (
+            <div
+              key={law.step}
+              className={`bg-white p-4 rounded-2xl border ${law.border} shadow-sm flex items-start gap-3`}
+            >
+              <span className={`p-2.5 rounded-xl shrink-0 ${law.badge}`}>
+                <Icon className="w-4 h-4" />
+              </span>
+              <div className="space-y-0.5">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  {law.step}
+                </div>
+                <div className="text-sm font-bold text-slate-900">{law.rule}</div>
+                <p className="text-xs text-slate-500 leading-snug">{law.desc}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {error && (
         <div className="p-3.5 rounded-lg bg-red-50 border border-red-200 text-sm text-red-600">
           {error}
@@ -291,7 +541,7 @@ export default function Habits() {
       )}
 
       {/* ================================================================= */}
-      {/* MODE 1 : BONNES HABITUDES (Uniquement les 4 Lois positives)       */}
+      {/* MODE 1 : BONNES HABITUDES                                         */}
       {/* ================================================================= */}
       {activeMode === 'good' && (
         <>
@@ -300,7 +550,7 @@ export default function Habits() {
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
                 <div className="flex items-center justify-between mb-6 gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600">
-                    Nouveau Système Atomic Habits • Étape {wizardStep} sur 3
+                    Nouveau Système • Étape {wizardStep} sur 3
                   </span>
 
                   <div className="flex items-center gap-3">
@@ -331,39 +581,36 @@ export default function Habits() {
                   {wizardStep === 1 && (
                     <div className="space-y-5">
                       <div>
-                        <h2 className="text-2xl font-bold text-slate-900">
-                          1. Quel type de personne voulez-vous devenir ?
+                        <h2 className="text-xl font-bold text-slate-900">
+                          1. Qui voulez-vous devenir ?
                         </h2>
                         <p className="text-sm text-slate-500 mt-1">
-                          « Le véritable changement de comportement est un changement d'identité. »
+                          Définissez l'identité que vos actions vont prouver.
                         </p>
                       </div>
 
-                      <div>
-                        <p className="text-xs font-medium text-slate-500 mb-2">Exemples :</p>
-                        <div className="flex flex-wrap gap-2">
-                          {IDENTITY_EXAMPLES.map((ex) => (
-                            <button
-                              key={ex.title}
-                              type="button"
-                              onClick={() =>
-                                setWizardData({
-                                  ...wizardData,
-                                  identityTitle: ex.title,
-                                  identityDesc: ex.desc,
-                                })
-                              }
-                              className="text-xs px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition cursor-pointer"
-                            >
-                              + {ex.title}
-                            </button>
-                          ))}
-                        </div>
+                      <div className="flex flex-wrap gap-2">
+                        {IDENTITY_EXAMPLES.map((ex) => (
+                          <button
+                            key={ex.title}
+                            type="button"
+                            onClick={() =>
+                              setWizardData({
+                                ...wizardData,
+                                identityTitle: ex.title,
+                                identityDesc: ex.desc,
+                              })
+                            }
+                            className="text-xs px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition cursor-pointer"
+                          >
+                            + {ex.title}
+                          </button>
+                        ))}
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">
-                          Votre identité cible *
+                          Identité cible *
                         </label>
                         <input
                           type="text"
@@ -372,22 +619,7 @@ export default function Habits() {
                           onChange={(e) =>
                             setWizardData({ ...wizardData, identityTitle: e.target.value })
                           }
-                          placeholder="Ex: Ingénieur Discipliné..."
-                          className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                          Affirmation personnelle (optionnel)
-                        </label>
-                        <input
-                          type="text"
-                          value={wizardData.identityDesc}
-                          onChange={(e) =>
-                            setWizardData({ ...wizardData, identityDesc: e.target.value })
-                          }
-                          placeholder="Ex: Je tiens mes engagements chaque jour."
+                          placeholder="Ex: Développeur Discipliné"
                           className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
@@ -443,16 +675,16 @@ export default function Habits() {
                     <div className="space-y-5">
                       <div>
                         <span className="inline-block text-xs font-semibold px-2.5 py-0.5 rounded bg-blue-50 text-blue-700 mb-2">
-                          1ère Loi : Rendre l'habitude évidente
+                          1ère Loi : Rendre évident
                         </span>
-                        <h2 className="text-2xl font-bold text-slate-900">
-                          2. Quelle action prouvera cette identité ?
+                        <h2 className="text-xl font-bold text-slate-900">
+                          2. Quelle action allez-vous faire ?
                         </h2>
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">
-                          Action principale *
+                          Habitude *
                         </label>
                         <input
                           type="text"
@@ -462,21 +694,6 @@ export default function Habits() {
                             setWizardData({ ...wizardData, habitTitle: e.target.value })
                           }
                           placeholder="Ex: Coder 45 minutes"
-                          className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                          Habit Stacking : Après quelle habitude actuelle ?
-                        </label>
-                        <input
-                          type="text"
-                          value={wizardData.cueTrigger}
-                          onChange={(e) =>
-                            setWizardData({ ...wizardData, cueTrigger: e.target.value })
-                          }
-                          placeholder="Ex: Après mon café du matin..."
                           className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
@@ -537,16 +754,16 @@ export default function Habits() {
                     <div className="space-y-5">
                       <div>
                         <span className="inline-block text-xs font-semibold px-2.5 py-0.5 rounded bg-amber-50 text-amber-700 mb-2">
-                          3ème Loi : Rendre l'habitude facile
+                          3ème Loi : Rendre facile
                         </span>
-                        <h2 className="text-2xl font-bold text-slate-900">
+                        <h2 className="text-xl font-bold text-slate-900">
                           3. Votre version « 2 minutes »
                         </h2>
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">
-                          Action minimale (moins de 2 minutes) *
+                          Action minimale les jours difficiles *
                         </label>
                         <input
                           type="text"
@@ -560,14 +777,14 @@ export default function Habits() {
                         />
                       </div>
 
-                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-sm">
+                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1 text-sm">
                         <div className="flex items-center gap-2 font-semibold text-slate-900">
                           <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                          <span>Votre contrat d'identité :</span>
+                          <span>Résumé de votre système :</span>
                         </div>
                         <p className="text-slate-600">
-                          En tant que <strong>{wizardData.identityTitle}</strong>, je vais{' '}
-                          <strong>{wizardData.habitTitle}</strong>.
+                          Identité : <strong>{wizardData.identityTitle}</strong> • Action :{' '}
+                          <strong>{wizardData.habitTitle}</strong>
                         </p>
                       </div>
 
@@ -595,71 +812,68 @@ export default function Habits() {
               </div>
             </div>
           ) : (
-            <div className="space-y-6">
-              {/* Mémo des 4 Lois de la Bonne Habitude uniquement */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {GOOD_HABIT_LAWS.map((item) => (
-                  <div
-                    key={item.step}
-                    className="bg-white p-3.5 rounded-xl border border-emerald-200 shadow-sm space-y-1 text-xs"
-                  >
-                    <div className="font-bold text-emerald-700">{item.step}</div>
-                    <div className="font-semibold text-slate-900">✅ {item.rule}</div>
-                    <p className="text-slate-500">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Barre d'actions + Filtres */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                  <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-                  <button
-                    onClick={() => setSelectedIdentity('all')}
-                    className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition shrink-0 cursor-pointer ${
-                      selectedIdentity === 'all'
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    Toutes ({habits.length})
-                  </button>
-                  {identities.map((identity) => (
-                    <button
-                      key={identity.id}
-                      onClick={() => setSelectedIdentity(identity.id)}
-                      className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-medium transition shrink-0 cursor-pointer ${
-                        String(selectedIdentity) === String(identity.id)
-                          ? 'bg-slate-900 text-white'
-                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span
-                        className="w-2.5 h-2.5 rounded-full"
-                        style={{ backgroundColor: identity.color || '#3B82F6' }}
-                      />
-                      <span>{identity.title}</span>
-                    </button>
-                  ))}
+            <div className="space-y-5">
+              {/* BARRE DE RECHERCHE + BOUTONS D'AJOUT */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Rechercher une habitude..."
+                    className="w-full pl-9 pr-4 py-2 text-sm rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
                 </div>
 
-                <div className="flex items-center gap-2.5 shrink-0">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => setShowHabitForm(!showHabitForm)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-medium hover:bg-slate-50 transition cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 transition cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Nouvelle habitude</span>
+                    <span>Ajouter habitude</span>
                   </button>
 
                   <button
                     onClick={openWizard}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition cursor-pointer"
                   >
                     <Compass className="w-4 h-4" />
                     <span>Nouveau système</span>
                   </button>
                 </div>
+              </div>
+
+              {/* Filtres par Identité */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                <button
+                  onClick={() => setSelectedIdentity('all')}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition shrink-0 cursor-pointer ${
+                    selectedIdentity === 'all'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Toutes ({habits.length})
+                </button>
+                {identities.map((identity) => (
+                  <button
+                    key={identity.id}
+                    onClick={() => setSelectedIdentity(identity.id)}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition shrink-0 cursor-pointer ${
+                      String(selectedIdentity) === String(identity.id)
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: identity.color || '#3B82F6' }}
+                    />
+                    <span>{identity.title}</span>
+                  </button>
+                ))}
               </div>
 
               {/* Formulaire ajout rapide d'habitude */}
@@ -668,12 +882,22 @@ export default function Habits() {
                   onSubmit={handleCreateHabit}
                   className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4"
                 >
-                  <h2 className="text-lg font-semibold text-slate-900">
-                    Ajouter une habitude à une identité existante
-                  </h2>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-base font-bold text-slate-900">
+                      Nouvelle habitude sur une identité existante
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setShowHabitForm(false)}
+                      className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
                         Identité *
                       </label>
                       <select
@@ -682,7 +906,7 @@ export default function Habits() {
                         onChange={(e) =>
                           setHabitForm({ ...habitForm, identity_id: e.target.value })
                         }
-                        className="w-full px-3.5 py-2 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       >
                         {identities.map((id) => (
                           <option key={id.id} value={id.id}>
@@ -692,7 +916,7 @@ export default function Habits() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
                         Action *
                       </label>
                       <input
@@ -701,11 +925,11 @@ export default function Habits() {
                         value={habitForm.title}
                         onChange={(e) => setHabitForm({ ...habitForm, title: e.target.value })}
                         placeholder="Ex: Lire 20 pages"
-                        className="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
                         Règle des 2 minutes *
                       </label>
                       <input
@@ -716,23 +940,23 @@ export default function Habits() {
                           setHabitForm({ ...habitForm, two_minute_version: e.target.value })
                         }
                         placeholder="Ex: Lire 1 paragraphe"
-                        className="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Heure
                         </label>
                         <input
                           type="time"
                           value={habitForm.cue_time}
                           onChange={(e) => setHabitForm({ ...habitForm, cue_time: e.target.value })}
-                          className="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Lieu
                         </label>
                         <input
@@ -742,255 +966,284 @@ export default function Habits() {
                             setHabitForm({ ...habitForm, cue_location: e.target.value })
                           }
                           placeholder="Ex: Salon"
-                          className="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
                     </div>
                   </div>
                   <div className="flex justify-end gap-2">
                     <button
-                      type="button"
-                      onClick={() => setShowHabitForm(false)}
-                      className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
-                    >
-                      Annuler
-                    </button>
-                    <button
                       type="submit"
-                      className="px-4 py-2 text-sm bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 cursor-pointer"
+                      className="px-4 py-2 text-xs bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 cursor-pointer"
                     >
-                      Créer
+                      Enregistrer l'habitude
                     </button>
                   </div>
                 </form>
               )}
 
-              {/* Cartes des bonnes habitudes */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredHabits.map((habit) => {
-                  const isCompleted = Boolean(habit.completed_today);
-                  const identity = identities.find((i) => i.id === habit.identity_id);
+              {/* LISTE DES BONNES HABITUDES */}
+              {filteredHabits.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+                  Aucune habitude trouvée pour cette recherche.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {filteredHabits.map((habit) => {
+                    const isCompleted = Boolean(habit.completed_today);
+                    const identity = identities.find((i) => i.id === habit.identity_id);
 
-                  return (
-                    <div
-                      key={habit.id}
-                      className={`bg-white rounded-2xl border p-5 transition flex flex-col justify-between ${
-                        isCompleted
-                          ? 'border-emerald-300 bg-emerald-50/30'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between gap-2 mb-3">
-                          {identity ? (
-                            <span
-                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
-                              style={{ backgroundColor: identity.color || '#3B82F6' }}
-                            >
-                              {identity.title}
-                            </span>
-                          ) : (
-                            <span></span>
-                          )}
+                    return (
+                      <div
+                        key={habit.id}
+                        className={`bg-white rounded-2xl border p-6 transition flex flex-col justify-between shadow-sm ${
+                          isCompleted
+                            ? 'border-emerald-300 bg-emerald-50/20'
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between gap-2">
+                            {identity ? (
+                              <span
+                                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold text-white"
+                                style={{ backgroundColor: identity.color || '#3B82F6' }}
+                              >
+                                {identity.title}
+                              </span>
+                            ) : (
+                              <span></span>
+                            )}
 
-                          <div className="flex items-center gap-3">
-                            <span className="inline-flex items-center gap-1 text-sm font-bold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full">
-                              <Flame className="w-4 h-4 fill-amber-500" />
-                              {habit.current_streak || 0} j
-                            </span>
-                            <button
-                              onClick={() => handleDeleteHabit(habit.id)}
-                              className="text-slate-400 hover:text-red-600 transition cursor-pointer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-2.5">
+                              <span
+                                title="Jours consécutifs"
+                                className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full"
+                              >
+                                <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                                {habit.current_streak || 0} j
+                              </span>
+                              <button
+                                onClick={() => handleDeleteHabit(habit.id)}
+                                title="Supprimer"
+                                className="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <h3
+                            className={`text-lg font-bold leading-snug ${
+                              isCompleted ? 'line-through text-slate-400' : 'text-slate-900'
+                            }`}
+                          >
+                            {habit.title}
+                          </h3>
+
+                          <div className="space-y-1.5 pt-1">
+                            {habit.two_minute_version && (
+                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 text-xs">
+                                <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                                <span>Version 2 min : {habit.two_minute_version}</span>
+                              </div>
+                            )}
+
+                            {(habit.cue_time || habit.cue_location) && (
+                              <div className="flex items-center gap-4 text-xs text-slate-400 pt-1">
+                                {habit.cue_time && (
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3.5 h-3.5" />
+                                    {habit.cue_time}
+                                  </span>
+                                )}
+                                {habit.cue_location && (
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="w-3.5 h-3.5" />
+                                    {habit.cue_location}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        <h3
-                          className={`text-lg font-semibold ${
-                            isCompleted ? 'line-through text-slate-400' : 'text-slate-900'
-                          }`}
-                        >
-                          {habit.title}
-                        </h3>
-
-                        {habit.two_minute_version && (
-                          <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1.5">
-                            <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                            <span>
-                              <strong>Règle 2 min :</strong> {habit.two_minute_version}
-                            </span>
-                          </p>
-                        )}
-
-                        {(habit.cue_time || habit.cue_location) && (
-                          <div className="flex items-center gap-4 text-xs text-slate-400 mt-3">
-                            {habit.cue_time && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5" />
-                                {habit.cue_time}
-                              </span>
-                            )}
-                            {habit.cue_location && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3.5 h-3.5" />
-                                {habit.cue_location}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mt-5 pt-4 border-t border-slate-100 flex items-center gap-2">
-                        <button
-                          onClick={() => handleToggleHabit(habit.id, 'full')}
-                          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-sm font-medium transition cursor-pointer ${
-                            isCompleted
-                              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                              : 'bg-slate-900 text-white hover:bg-slate-800'
-                          }`}
-                        >
-                          <Check className="w-4 h-4" />
-                          <span>{isCompleted ? 'Validée aujourd\'hui' : 'Valider (100%)'}</span>
-                        </button>
-
-                        {!isCompleted && habit.two_minute_version && (
+                        <div className="mt-5 pt-4 border-t border-slate-100 flex items-center gap-2.5">
                           <button
-                            onClick={() => handleToggleHabit(habit.id, 'two_minute')}
-                            className="flex items-center gap-1 py-2 px-3 rounded-xl text-sm font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition cursor-pointer"
+                            type="button"
+                            onClick={() => handleToggleHabit(habit.id, 'full')}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-sm font-semibold transition cursor-pointer ${
+                              isCompleted
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                : 'bg-slate-900 text-white hover:bg-slate-800'
+                            }`}
                           >
-                            <Zap className="w-4 h-4" />
-                            <span>2 min</span>
+                            <Check className="w-4 h-4" />
+                            <span>{isCompleted ? 'Validée' : 'Valider'}</span>
                           </button>
-                        )}
+
+                          {!isCompleted && habit.two_minute_version && (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleHabit(habit.id, 'two_minute')}
+                              className="flex items-center gap-1.5 py-2.5 px-3.5 rounded-xl text-sm font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 transition cursor-pointer"
+                            >
+                              <Zap className="w-4 h-4 fill-amber-500 text-amber-600" />
+                              <span>2 min</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </>
       )}
 
       {/* ================================================================= */}
-      {/* MODE 2 : MAUVAISES HABITUDES (Uniquement les 4 Inversions)        */}
+      {/* MODE 2 : MAUVAISES HABITUDES (Sauvegardées en BDD Laravel)        */}
       {/* ================================================================= */}
       {activeMode === 'bad' && (
-        <div className="space-y-8">
-          {/* Mémo des 4 Inversions uniquement */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {BAD_HABIT_LAWS.map((item) => (
-              <div
-                key={item.step}
-                className="bg-white p-3.5 rounded-xl border border-rose-200 shadow-sm space-y-1 text-xs"
-              >
-                <div className="font-bold text-rose-700">{item.step}</div>
-                <div className="font-semibold text-slate-900">🚫 {item.rule}</div>
-                <p className="text-slate-500">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Formulaire pour neutraliser une mauvaise habitude */}
-          <form
-            onSubmit={handleAddBadHabit}
-            className="bg-white rounded-2xl border border-rose-200 p-6 shadow-sm space-y-5"
-          >
-            <div className="flex items-center gap-2 text-rose-700 font-bold text-lg">
-              <ShieldAlert className="w-5 h-5" />
-              <h2>Neutraliser une mauvaise habitude</h2>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Quelle mauvaise habitude voulez-vous éliminer ? *
-              </label>
+        <div className="space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                required
-                value={badForm.name}
-                onChange={(e) => setBadForm({ ...badForm, name: e.target.value })}
-                placeholder="Ex: Scroller sur TikTok avant de dormir..."
-                className="w-full px-3.5 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Rechercher une mauvaise habitude..."
+                className="w-full pl-9 pr-4 py-2 text-sm rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-rose-700 mb-1">
-                  1. La rendre INVISIBLE (Signal)
-                </label>
-                <input
-                  type="text"
-                  value={badForm.invisible}
-                  onChange={(e) => setBadForm({ ...badForm, invisible: e.target.value })}
-                  placeholder="Ex: Laisser mon téléphone dans le salon la nuit"
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500"
-                />
+            <button
+              onClick={() => setShowBadForm(!showBadForm)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 transition cursor-pointer self-start"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Neutraliser une mauvaise habitude</span>
+            </button>
+          </div>
+
+          {(badHabits.length === 0 || showBadForm) && (
+            <form
+              onSubmit={handleAddBadHabit}
+              className="bg-white rounded-2xl border border-rose-200 p-6 shadow-sm space-y-5"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-rose-700 font-bold text-base">
+                  <ShieldAlert className="w-5 h-5" />
+                  <h2>Plan pour éliminer une mauvaise habitude</h2>
+                </div>
+                {badHabits.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowBadForm(false)}
+                    className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-rose-700 mb-1">
-                  2. La rendre REPOUSSANTE (Envie)
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Habitude à éliminer *
                 </label>
                 <input
                   type="text"
-                  value={badForm.unattractive}
-                  onChange={(e) => setBadForm({ ...badForm, unattractive: e.target.value })}
-                  placeholder="Ex: Penser à la fatigue du lendemain matin"
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  required
+                  value={badForm.name}
+                  onChange={(e) => setBadForm({ ...badForm, name: e.target.value })}
+                  placeholder="Ex: Scroller sur TikTok avant de dormir"
+                  className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-rose-700 mb-1">
-                  3. La rendre DIFFICILE (Friction)
-                </label>
-                <input
-                  type="text"
-                  value={badForm.difficult}
-                  onChange={(e) => setBadForm({ ...badForm, difficult: e.target.value })}
-                  placeholder="Ex: Activer le mode sommeil / bloquer l'application à 22h"
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-rose-700 mb-1">
+                    1. Rendre INVISIBLE
+                  </label>
+                  <input
+                    type="text"
+                    value={badForm.invisible}
+                    onChange={(e) => setBadForm({ ...badForm, invisible: e.target.value })}
+                    placeholder="Ex: Laisser le téléphone dans le salon"
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-rose-700 mb-1">
+                    2. Rendre REPOUSSANT
+                  </label>
+                  <input
+                    type="text"
+                    value={badForm.unattractive}
+                    onChange={(e) => setBadForm({ ...badForm, unattractive: e.target.value })}
+                    placeholder="Ex: Penser à la fatigue du lendemain"
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-rose-700 mb-1">
+                    3. Rendre DIFFICILE
+                  </label>
+                  <input
+                    type="text"
+                    value={badForm.difficult}
+                    onChange={(e) => setBadForm({ ...badForm, difficult: e.target.value })}
+                    placeholder="Ex: Activer le blocage d'applications à 22h"
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-rose-700 mb-1">
+                    4. Rendre INSATISFAISANT
+                  </label>
+                  <input
+                    type="text"
+                    value={badForm.unsatisfying}
+                    onChange={(e) => setBadForm({ ...badForm, unsatisfying: e.target.value })}
+                    placeholder="Ex: Noter chaque écart dans mon journal"
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-rose-700 mb-1">
-                  4. La rendre INSATISFAISANTE (Conséquence)
-                </label>
-                <input
-                  type="text"
-                  value={badForm.unsatisfying}
-                  onChange={(e) => setBadForm({ ...badForm, unsatisfying: e.target.value })}
-                  placeholder="Ex: Noter chaque écart dans mon journal quotidien"
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500"
-                />
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={savingBadHabit}
+                  className="px-5 py-2 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 disabled:opacity-50 transition cursor-pointer"
+                >
+                  {savingBadHabit ? 'Enregistrement...' : 'Enregistrer ce plan'}
+                </button>
               </div>
-            </div>
+            </form>
+          )}
 
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="px-5 py-2.5 rounded-lg bg-rose-600 text-white text-sm font-medium hover:bg-rose-700 transition cursor-pointer"
-              >
-                Ajouter ce plan anti-habitude
-              </button>
-            </div>
-          </form>
-
-          {/* Cartes des mauvaises habitudes en cours d'élimination */}
-          {badHabits.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {badHabits.map((item) => (
+          {filteredBadHabits.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {filteredBadHabits.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-white rounded-2xl border border-rose-200 p-5 shadow-sm space-y-3"
+                  className="bg-white rounded-2xl border border-rose-200 p-6 shadow-sm space-y-3"
                 >
                   <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-slate-900">🚫 {item.name}</h3>
+                    <div className="flex items-center gap-2 font-bold text-slate-900">
+                      <span className="p-1.5 rounded-lg bg-rose-100 text-rose-600">
+                        <Ban className="w-4 h-4" />
+                      </span>
+                      <span>{item.name}</span>
+                    </div>
                     <button
                       onClick={() => handleRemoveBadHabit(item.id)}
                       title="Supprimer"
@@ -1000,30 +1253,30 @@ export default function Habits() {
                     </button>
                   </div>
 
-                  <ul className="text-xs text-slate-600 space-y-1.5">
+                  <div className="space-y-1.5 text-xs text-slate-600 pt-1">
                     {item.invisible && (
-                      <li>
+                      <p>
                         <strong className="text-rose-700">1. Invisible :</strong> {item.invisible}
-                      </li>
+                      </p>
                     )}
                     {item.unattractive && (
-                      <li>
+                      <p>
                         <strong className="text-rose-700">2. Repoussant :</strong>{' '}
                         {item.unattractive}
-                      </li>
+                      </p>
                     )}
                     {item.difficult && (
-                      <li>
+                      <p>
                         <strong className="text-rose-700">3. Difficile :</strong> {item.difficult}
-                      </li>
+                      </p>
                     )}
                     {item.unsatisfying && (
-                      <li>
+                      <p>
                         <strong className="text-rose-700">4. Insatisfaisant :</strong>{' '}
                         {item.unsatisfying}
-                      </li>
+                      </p>
                     )}
-                  </ul>
+                  </div>
                 </div>
               ))}
             </div>

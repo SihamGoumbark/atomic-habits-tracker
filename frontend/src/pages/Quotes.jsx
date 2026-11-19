@@ -114,9 +114,9 @@ const BOOK_QUOTES = [
 ];
 
 const LANGUAGES = [
-  { code: 'fr', label: 'Français', flag: '🇫🇷' },
-  { code: 'en', label: 'English', flag: '🇬🇧' },
-  { code: 'es', label: 'Español', flag: '🇪🇸' },
+  { code: 'fr', label: 'Français', badge: 'FR' },
+  { code: 'en', label: 'English', badge: 'EN' },
+  { code: 'es', label: 'Español', badge: 'ES' },
 ];
 
 export default function Quotes() {
@@ -159,7 +159,7 @@ export default function Quotes() {
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              <span>{l.flag}</span>
+              <span className="text-[10px] font-bold uppercase opacity-75">{l.badge}</span>
               <span>{l.label}</span>
             </button>
           ))}
