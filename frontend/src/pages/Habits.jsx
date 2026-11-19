@@ -7,13 +7,13 @@ import {
   Ban,
   Zap,
   Trash2,
+  Pencil,
   Clock,
   MapPin,
   ArrowRight,
   ArrowLeft,
   Target,
   ShieldCheck,
-  Compass,
   X,
   ThumbsUp,
   ThumbsDown,
@@ -168,10 +168,13 @@ export default function Habits() {
   });
   const [wizardSubmitting, setWizardSubmitting] = useState(false);
 
-  // Formulaire rapide d'ajout de bonne habitude
+  // Formulaire ajout / modification complète (Habitude + Identité associée)
   const [showHabitForm, setShowHabitForm] = useState(false);
+  const [editingHabitId, setEditingHabitId] = useState(null);
   const [habitForm, setHabitForm] = useState({
     identity_id: initialCache?.identities?.[0]?.id || '',
+    identity_title: initialCache?.identities?.[0]?.title || '',
+    identity_color: initialCache?.identities?.[0]?.color || IDENTITY_COLORS[0],
     title: '',
     two_minute_version: '',
     cue_time: '',
@@ -230,7 +233,12 @@ export default function Habits() {
       );
 
       if (fetchedIdentities.length > 0 && !habitForm.identity_id) {
-        setHabitForm((prev) => ({ ...prev, identity_id: fetchedIdentities[0].id }));
+        setHabitForm((prev) => ({
+          ...prev,
+          identity_id: fetchedIdentities[0].id,
+          identity_title: fetchedIdentities[0].title,
+          identity_color: fetchedIdentities[0].color || IDENTITY_COLORS[0],
+        }));
       }
     } catch {
       if (!initialCache) {
@@ -247,6 +255,7 @@ export default function Habits() {
 
   const openWizard = () => {
     setShowHabitForm(false);
+    setEditingHabitId(null);
     setWizardStep(1);
     setWizardData({
       identityTitle: '',
@@ -259,6 +268,66 @@ export default function Habits() {
       twoMinuteVersion: '',
     });
     setForceWizard(true);
+  };
+
+  const openCreateHabitForm = () => {
+    const defaultId = identities[0];
+    setEditingHabitId(null);
+    setHabitForm({
+      identity_id: defaultId?.id || '',
+      identity_title: defaultId?.title || '',
+      identity_color: defaultId?.color || IDENTITY_COLORS[0],
+      title: '',
+      two_minute_version: '',
+      cue_time: '',
+      cue_location: '',
+    });
+    setShowHabitForm(true);
+  };
+
+  const startEditHabit = (habit) => {
+    setError('');
+    setForceWizard(false);
+    const linkedIdentity =
+      identities.find((i) => String(i.id) === String(habit.identity_id)) || identities[0];
+
+    setEditingHabitId(habit.id);
+    setHabitForm({
+      identity_id: linkedIdentity?.id || '',
+      identity_title: linkedIdentity?.title || '',
+      identity_color: linkedIdentity?.color || IDENTITY_COLORS[0],
+      title: habit.title || '',
+      two_minute_version: habit.two_minute_version || '',
+      cue_time: habit.cue_time ? habit.cue_time.slice(0, 5) : '',
+      cue_location: habit.cue_location || '',
+    });
+    setShowHabitForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSelectIdentityInForm = (newId) => {
+    const found = identities.find((i) => String(i.id) === String(newId));
+    setHabitForm((prev) => ({
+      ...prev,
+      identity_id: newId,
+      identity_title: found?.title || '',
+      identity_color: found?.color || IDENTITY_COLORS[0],
+    }));
+  };
+
+  const closeHabitForm = () => {
+    const defaultId = identities[0];
+    setShowHabitForm(false);
+    setEditingHabitId(null);
+    setHabitForm({
+      identity_id: defaultId?.id || '',
+      identity_title: defaultId?.title || '',
+      identity_color: defaultId?.color || IDENTITY_COLORS[0],
+      title: '',
+      two_minute_version: '',
+      cue_time: '',
+      cue_location: '',
+    });
   };
 
   const handleWizardComplete = async (e) => {
@@ -294,7 +363,12 @@ export default function Habits() {
       setIdentities(nextIdentities);
       setHabits(nextHabits);
       syncCache(nextIdentities, nextHabits, badHabits);
-      setHabitForm((prev) => ({ ...prev, identity_id: createdIdentity.id }));
+      setHabitForm((prev) => ({
+        ...prev,
+        identity_id: createdIdentity.id,
+        identity_title: createdIdentity.title,
+        identity_color: createdIdentity.color,
+      }));
       setForceWizard(false);
     } catch (err) {
       setError(err.response?.data?.message || 'Erreur lors de la création de votre système.');
@@ -303,27 +377,73 @@ export default function Habits() {
     }
   };
 
-  const handleCreateHabit = async (e) => {
+  const handleSaveHabit = async (e) => {
     e.preventDefault();
     setError('');
     try {
-      const res = await api.post('/habits', {
-        ...habitForm,
-        frequency: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
-      });
-      const nextHabits = [res.data.habit, ...habits];
-      setHabits(nextHabits);
-      syncCache(identities, nextHabits, badHabits);
-      setHabitForm({
-        identity_id: identities[0]?.id || '',
-        title: '',
-        two_minute_version: '',
-        cue_time: '',
-        cue_location: '',
-      });
-      setShowHabitForm(false);
+      let nextIdentities = [...identities];
+
+      // En mode édition : met aussi à jour le nom et la couleur de l'identité associée
+      if (editingHabitId && habitForm.identity_id && habitForm.identity_title.trim()) {
+        const existingId = identities.find(
+          (i) => String(i.id) === String(habitForm.identity_id)
+        );
+        if (
+          existingId &&
+          (existingId.title !== habitForm.identity_title.trim() ||
+            existingId.color !== habitForm.identity_color)
+        ) {
+          const idRes = await api.put(`/identities/${habitForm.identity_id}`, {
+            title: habitForm.identity_title.trim(),
+            color: habitForm.identity_color,
+            description: existingId.description || '',
+            icon: existingId.icon || 'sparkles',
+          });
+          const updatedId = idRes.data.identity || {
+            ...existingId,
+            title: habitForm.identity_title.trim(),
+            color: habitForm.identity_color,
+          };
+          nextIdentities = identities.map((i) =>
+            String(i.id) === String(habitForm.identity_id) ? { ...i, ...updatedId } : i
+          );
+          setIdentities(nextIdentities);
+        }
+      }
+
+      const habitPayload = {
+        identity_id: habitForm.identity_id,
+        title: habitForm.title,
+        two_minute_version: habitForm.two_minute_version,
+        cue_time: habitForm.cue_time || null,
+        cue_location: habitForm.cue_location || null,
+      };
+
+      if (editingHabitId) {
+        const res = await api.put(`/habits/${editingHabitId}`, habitPayload);
+        const updatedHabit = res.data.habit || res.data;
+        const nextHabits = habits.map((h) =>
+          h.id === editingHabitId ? { ...h, ...updatedHabit } : h
+        );
+        setHabits(nextHabits);
+        syncCache(nextIdentities, nextHabits, badHabits);
+      } else {
+        const res = await api.post('/habits', {
+          ...habitPayload,
+          frequency: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+        });
+        const nextHabits = [res.data.habit, ...habits];
+        setHabits(nextHabits);
+        syncCache(nextIdentities, nextHabits, badHabits);
+      }
+      closeHabitForm();
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la création de l\'habitude.');
+      setError(
+        err.response?.data?.message ||
+          (editingHabitId
+            ? 'Erreur lors de la modification.'
+            : 'Erreur lors de la création de l\'habitude.')
+      );
     }
   };
 
@@ -371,6 +491,7 @@ export default function Habits() {
       const nextHabits = habits.filter((h) => h.id !== habitId);
       setHabits(nextHabits);
       syncCache(identities, nextHabits, badHabits);
+      if (editingHabitId === habitId) closeHabitForm();
     } catch {
       setError('Impossible de supprimer cette habitude.');
     }
@@ -828,7 +949,9 @@ export default function Habits() {
 
                 <div className="flex flex-wrap items-center gap-2">
                   <button
-                    onClick={() => setShowHabitForm(!showHabitForm)}
+                    onClick={() =>
+                      showHabitForm && !editingHabitId ? closeHabitForm() : openCreateHabitForm()
+                    }
                     className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 transition cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
@@ -839,7 +962,6 @@ export default function Habits() {
                     onClick={openWizard}
                     className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition cursor-pointer"
                   >
-                    <Compass className="w-4 h-4" />
                     <span>Nouveau système</span>
                   </button>
                 </div>
@@ -876,48 +998,115 @@ export default function Habits() {
                 ))}
               </div>
 
-              {/* Formulaire ajout rapide d'habitude */}
+              {/* Formulaire ajout / modification complète */}
               {showHabitForm && (
                 <form
-                  onSubmit={handleCreateHabit}
-                  className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4"
+                  onSubmit={handleSaveHabit}
+                  className={`bg-white p-6 rounded-2xl border shadow-sm space-y-4 ${
+                    editingHabitId ? 'border-indigo-300 ring-2 ring-indigo-500/10' : 'border-slate-200'
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <h2 className="text-base font-bold text-slate-900">
-                      Nouvelle habitude sur une identité existante
+                      {editingHabitId
+                        ? 'Modifier l\'habitude et son identité'
+                        : 'Nouvelle habitude sur une identité existante'}
                     </h2>
                     <button
                       type="button"
-                      onClick={() => setShowHabitForm(false)}
+                      onClick={closeHabitForm}
                       className="text-slate-400 hover:text-slate-700 cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Identité *
-                      </label>
-                      <select
-                        required
-                        value={habitForm.identity_id}
-                        onChange={(e) =>
-                          setHabitForm({ ...habitForm, identity_id: e.target.value })
-                        }
-                        className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        {identities.map((id) => (
-                          <option key={id.id} value={id.id}>
-                            {id.title}
-                          </option>
-                        ))}
-                      </select>
+                  {/* Bloc Identité : sélection + édition directe du nom et couleur en mode modification */}
+                  {editingHabitId ? (
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Identité associée *
+                          </label>
+                          <select
+                            required
+                            value={habitForm.identity_id}
+                            onChange={(e) => handleSelectIdentityInForm(e.target.value)}
+                            className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            {identities.map((id) => (
+                              <option key={id.id} value={id.id}>
+                                {id.title}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Renommer cette identité *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={habitForm.identity_title}
+                            onChange={(e) =>
+                              setHabitForm({ ...habitForm, identity_title: e.target.value })
+                            }
+                            placeholder="Nom de l'identité"
+                            className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 pt-1">
+                        <span className="text-xs font-semibold text-slate-700">
+                          Couleur de l'identité :
+                        </span>
+                        <div className="flex gap-2">
+                          {IDENTITY_COLORS.map((color) => (
+                            <button
+                              key={color}
+                              type="button"
+                              onClick={() => setHabitForm({ ...habitForm, identity_color: color })}
+                              style={{ backgroundColor: color }}
+                              className={`w-6 h-6 rounded-full transition cursor-pointer ${
+                                habitForm.identity_color === color
+                                  ? 'ring-2 ring-offset-2 ring-slate-900 scale-110'
+                                  : ''
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     </div>
+                  ) : null}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {!editingHabitId && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Identité *
+                        </label>
+                        <select
+                          required
+                          value={habitForm.identity_id}
+                          onChange={(e) => handleSelectIdentityInForm(e.target.value)}
+                          className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                          {identities.map((id) => (
+                            <option key={id.id} value={id.id}>
+                              {id.title}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Action *
+                        Action (Habitude) *
                       </label>
                       <input
                         type="text"
@@ -973,10 +1162,17 @@ export default function Habits() {
                   </div>
                   <div className="flex justify-end gap-2">
                     <button
+                      type="button"
+                      onClick={closeHabitForm}
+                      className="px-4 py-2 text-xs text-slate-600 hover:bg-slate-100 font-semibold rounded-lg cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                    <button
                       type="submit"
                       className="px-4 py-2 text-xs bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 cursor-pointer"
                     >
-                      Enregistrer l'habitude
+                      {editingHabitId ? 'Mettre à jour' : 'Enregistrer l\'habitude'}
                     </button>
                   </div>
                 </form>
@@ -991,7 +1187,7 @@ export default function Habits() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {filteredHabits.map((habit) => {
                     const isCompleted = Boolean(habit.completed_today);
-                    const identity = identities.find((i) => i.id === habit.identity_id);
+                    const identity = identities.find((i) => String(i.id) === String(habit.identity_id));
 
                     return (
                       <div
@@ -1015,18 +1211,25 @@ export default function Habits() {
                               <span></span>
                             )}
 
-                            <div className="flex items-center gap-2.5">
+                            <div className="flex items-center gap-1.5">
                               <span
                                 title="Jours consécutifs"
-                                className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full"
+                                className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full mr-1"
                               >
                                 <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                                 {habit.current_streak || 0} j
                               </span>
                               <button
+                                onClick={() => startEditHabit(habit)}
+                                title="Modifier"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition cursor-pointer"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
                                 onClick={() => handleDeleteHabit(habit.id)}
                                 title="Supprimer"
-                                className="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
