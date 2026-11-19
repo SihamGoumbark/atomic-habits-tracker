@@ -42,6 +42,7 @@ npm run dev
 ## Rapport & Conception
 
 Retrouvez le rapport complet du projet (Analyse fonctionnelle, Architecture 3-Tiers, Diagrammes UML, Modélisation Merise MCD/MLD/MPD, Sécurité et Aperçu visuel) dans le document PDF :
-**[Consulter le Rapport Complet (PDF)](docs/Rapport_Atomic_Habits_Tracker.pdf)**
+**[Consulter le Rapport Complet (PDF)](docs/Rapport_Atomic_Habits_Tracker.pdf)**  
+*(Note : Si l'aperçu intégré de GitHub ne s'affiche pas directement, cliquez simplement sur le bouton **Download** (`⤓`) ou **View raw** en haut à droite de la page du fichier pour l'ouvrir.)*
 
 
