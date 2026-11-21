@@ -18,7 +18,7 @@ class HabitController extends Controller
             ->habits()
             ->with('identity')
             ->withExists(['logs as completed_today' => function ($query) use ($today) {
-                $query->where('completed_date', $today);
+                $query->whereDate('completed_date', $today);
             }])
             ->latest()
             ->get();
@@ -26,7 +26,7 @@ class HabitController extends Controller
         // Vérification automatique de la règle "Never Miss Twice"
         foreach ($habits as $habit) {
             if ($habit->current_streak > 0 && ! $habit->completed_today) {
-                $doneYesterday = $habit->logs()->where('completed_date', $yesterday)->exists();
+                $doneYesterday = $habit->logs()->whereDate('completed_date', $yesterday)->exists();
                 if (! $doneYesterday && ! $habit->missed_yesterday) {
                     $habit->update(['missed_yesterday' => true]);
                 }
@@ -118,7 +118,7 @@ class HabitController extends Controller
         $today = Carbon::today()->toDateString();
         $yesterday = Carbon::yesterday()->toDateString();
 
-        $existingLog = $habit->logs()->where('completed_date', $today)->first();
+        $existingLog = $habit->logs()->whereDate('completed_date', $today)->first();
 
         if ($existingLog) {
             // Annuler la validation d'aujourd'hui (Undo)
@@ -141,7 +141,7 @@ class HabitController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
-        $doneYesterday = $habit->logs()->where('completed_date', $yesterday)->exists();
+        $doneYesterday = $habit->logs()->whereDate('completed_date', $yesterday)->exists();
         $newStreak = $doneYesterday ? $habit->current_streak + 1 : 1;
         $bestStreak = max($habit->best_streak, $newStreak);
 

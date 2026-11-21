@@ -1,7 +1,7 @@
 
 # Atomic Habits Tracker — Full-Stack Web App
 
-Application web full-stack de suivi d'habitudes et de développement personnel inspirée du livre *Atomic Habits* de James Clear, construite avec **Laravel 11 (API REST / Sanctum)** et **React 18 (Vite + Tailwind CSS)**.
+Application web full-stack de suivi d'habitudes et de développement personnel inspirée du livre *Atomic Habits* de James Clear, construite avec **Laravel 13 (API REST / Sanctum)**, **React 18 (Vite + Tailwind CSS)** et conteneurisée avec **Docker**.
 
 ## Fonctionnalités principales
 - **Système basé sur l'identité :** Création, édition et suivi d'identités cibles avec accumulation de « votes » à chaque action validée.
@@ -13,12 +13,29 @@ Application web full-stack de suivi d'habitudes et de développement personnel i
 - **Expérience utilisateur & Performance :** Thème clair/sombre (*Dark Mode*), hydratage initial groupé (`/api/bootstrap`), mise en cache locale (`sessionStorage`) et mise à jour optimiste (*Optimistic UI*).
 
 ## Stack Technique
-- **Backend :** PHP 8.2+, Laravel 11, Laravel Sanctum, Eloquent ORM, MySQL
+- **Backend :** PHP 8.3+, Laravel 13, Laravel Sanctum, Eloquent ORM, SQL (MySQL / MariaDB)
 - **Frontend :** React 18, Vite, Tailwind CSS, Axios, Lucide React
+- **DevOps & Conteneurisation :** Docker & Docker Compose
 
-## Installation locale
+## Lancement rapide avec Docker (Recommandé)
+
+Assurez-vous d'avoir **Docker Desktop** installé et démarré, puis exécutez à la racine du projet :
+
+```bash
+docker compose up --build
+
+```
+
+Une fois les conteneurs démarrés, l'application est accessible sur :
+
+* **Frontend (React) :** `http://localhost:5173`
+* **Backend API (Laravel) :** `http://localhost:8000`
+* **Base de données (MariaDB) :** Port `3307`
+
+## Installation locale manuelle (Sans Docker)
 
 ### 1. Backend (Laravel)
+
 ```bash
 cd backend
 composer install
@@ -42,7 +59,6 @@ npm run dev
 ## Rapport & Conception
 
 Retrouvez le rapport complet du projet (Analyse fonctionnelle, Architecture 3-Tiers, Diagrammes UML, Modélisation Merise MCD/MLD/MPD, Sécurité et Aperçu visuel) dans le document PDF :
-**[Consulter le Rapport Complet (PDF)](docs/Rapport_Atomic_Habits_Tracker.pdf)**  
+**[Consulter le Rapport Complet (PDF)](docs/Rapport_Atomic_Habits_Tracker.pdf)**
+
 *(Note : Si l'aperçu intégré de GitHub ne s'affiche pas directement, cliquez simplement sur le bouton **Download** (`⤓`) ou **View raw** en haut à droite de la page du fichier pour l'ouvrir.)*
-
-
